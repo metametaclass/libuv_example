@@ -32,16 +32,25 @@ DEBUG_FLAGS            = -ggdb3
 endif
 endif
 
+OBJECT_DIR = build_$(detected_OS)
+
+run: $(target)
+	$(target)
+
 all: $(target)	
 	@echo $(target)
 	@echo $(detected_OS)
 
-build_$(detected_OS)/%.o: %.c 
-	mkdir -p build_$(detected_OS)/
+$(OBJECT_DIR)/%.o: %.c 
+	mkdir -p $(OBJECT_DIR)
 	gcc -c $< -I/usr/include -Wall -Wpedantic $(OPTIMIZE_FLAGS) $(DEBUG_FLAGS) -o $@
 
-$(target): build_$(detected_OS)/libuv_test.o 
-	gcc $^ -L/usr/lib -luv $(LINKER_DEBUG) -o $@ 
+SRC := libuv_test.c wmq_error.c debug.c
+
+TARGET_OBJS     = $(addsuffix .o,$(addprefix $(OBJECT_DIR)/,$(basename $(SRC))))
+
+$(target): $(TARGET_OBJS)
+	gcc $^ -L/usr/lib $(OPTIMIZE_FLAGS) $(DEBUG_FLAGS) -luv $(LINKER_DEBUG) -o $@ 
 
 
 clean:

@@ -1,5 +1,6 @@
 #include "debug.h"
 
+#include <assert.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <time.h>
@@ -393,5 +394,90 @@ void debug_print_no_memory(const char *msg) {
         fwrite(msg, 1, strlen(msg), stderr);
         fwrite("\n", 1, 1, stderr);
         //fprintf(stderr, "%s\n", msg);
+    }
+}
+
+#define HEX_BUFFER_SIZE 160
+const char *debug_hex_chars = "0123456789ABCDEF";
+
+void debug_print_hex(int level, const char *msg, void *data, size_t len, size_t address) {
+    size_t pos = 0;
+    size_t size;
+    size_t start_offset;
+    int i, c, buffer_pos, buffer_pos_char;
+    char hex_buffer[HEX_BUFFER_SIZE];
+
+    if (level < g_log_level) {
+        return;
+    }
+
+    debug_print(level, "%s offset:%" PRIxPTR " data:%p len:%d", msg, address, data, len);
+
+    memset(hex_buffer, 32, sizeof(hex_buffer));
+    start_offset = address % 16;
+    size = len + start_offset;
+
+    //buffer_pos = sprintf_s(hex_buffer, HEX_BUFFER_SIZE, "%10X: ", address);
+    //buffer_pos = _snprintf(hex_buffer, HEX_BUFFER_SIZE, "%10X: ", address);
+    buffer_pos = sprintf(hex_buffer, "%10" PRIxPTR ": ", address);
+
+    address = address - start_offset;
+    buffer_pos_char = 63;
+    i = 0;
+
+    while (pos < size) {
+        if (i == 16) {
+            assert(buffer_pos_char < HEX_BUFFER_SIZE);
+            hex_buffer[buffer_pos_char] = '\0';
+            debug_print(level, "%s", hex_buffer);
+
+            address += 16;
+            //buffer_pos = sprintf_s(hex_buffer, HEX_BUFFER_SIZE, "%10X: ", address);
+            //buffer_pos = _snprintf(hex_buffer, HEX_BUFFER_SIZE, "%10X: ", address);
+            buffer_pos = sprintf(hex_buffer, "%10" PRIxPTR ": ", address);
+            buffer_pos_char = 63;
+            i = 0;
+        }
+        if (i == 8) {
+            hex_buffer[buffer_pos++] = '|';
+        }
+
+        if (pos < start_offset) {
+            c = -1;
+        } else {
+            c = ((unsigned char *)data)[pos - start_offset];
+        }
+        assert(buffer_pos < HEX_BUFFER_SIZE);
+        if (c < 0) {
+            hex_buffer[buffer_pos++] = ' ';
+            hex_buffer[buffer_pos++] = ' ';
+            hex_buffer[buffer_pos++] = ' ';
+            hex_buffer[buffer_pos_char++] = ' ';
+        } else {
+            hex_buffer[buffer_pos++] = debug_hex_chars[c >> 4];
+            hex_buffer[buffer_pos++] = debug_hex_chars[c & 0x0F];
+            hex_buffer[buffer_pos++] = ' ';
+            if (c < 32) {
+                hex_buffer[buffer_pos_char++] = '.';
+            } else {
+                hex_buffer[buffer_pos_char++] = c;
+            }
+        }
+
+        i++;
+        pos++;
+    }
+
+    if (i > 0) {
+        while (i < 16) {
+            hex_buffer[buffer_pos++] = ' ';
+            hex_buffer[buffer_pos++] = ' ';
+            hex_buffer[buffer_pos++] = ' ';
+            hex_buffer[buffer_pos_char++] = ' ';
+            i++;
+        }
+        assert(buffer_pos_char < HEX_BUFFER_SIZE);
+        hex_buffer[buffer_pos_char] = '\0';
+        debug_print(level, "%s", hex_buffer);
     }
 }

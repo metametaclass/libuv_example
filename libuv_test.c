@@ -15,10 +15,12 @@ static void on_alloc_buffer(uv_handle_t* handle, size_t size, uv_buf_t* buf) {
 
 static void tty_read(uv_stream_t* tty_in, ssize_t nread, const uv_buf_t* buf) {
     if (nread <= 0) {
-        WMQ_LOG(LL_INFO, "closing");
+        WMQ_LOG(LL_INFO, "close tty_in");
         uv_close((uv_handle_t*)tty_in, NULL);
     } else {
-        WMQ_LOG(LL_INFO, "%zu: %.*s", nread, nread, buf->base);
+        //debug_print_hex(LL_INFO, __func__, buf->base, nread, 0);
+        //WMQ_LOG(LL_INFO, "%zu: %.*s", nread, nread, buf->base);
+        debug_print_hex(LL_INFO, "", buf->base, nread, 0);
     }
 }
 

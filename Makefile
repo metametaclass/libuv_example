@@ -49,9 +49,16 @@ SRC := libuv_test.c wmq_error.c debug.c
 
 TARGET_OBJS     = $(addsuffix .o,$(addprefix $(OBJECT_DIR)/,$(basename $(SRC))))
 
-$(target): $(TARGET_OBJS)
-	gcc $^ -L/usr/lib $(OPTIMIZE_FLAGS) $(DEBUG_FLAGS) -luv $(LINKER_DEBUG) -o $@ 
+DLL_DEPS :=
+ifeq ($(detected_OS), Windows)
+	DLL_DEPS += $(OBJECT_DIR)/libuv-1.dll
+endif
 
+$(OBJECT_DIR)/libuv-1.dll:
+	cp /mingw64/bin/libuv-1.dll $(OBJECT_DIR)/
+
+$(target): $(TARGET_OBJS) $(DLL_DEPS)
+	gcc $^ -L/usr/lib $(OPTIMIZE_FLAGS) $(DEBUG_FLAGS) -luv $(LINKER_DEBUG) -o $@ 
 
 clean:
 	rm -f $(APP) *.elf *.exe *.o 

@@ -51,9 +51,10 @@ void debug_fflush();
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
-#define WMQ_LOG_NOMEMORY(message)                                                                  \
-    do {                                                                                           \
-        debug_print_no_memory(__func__ " File:" __FILE__ " Line:" TOSTRING(__LINE__) " " message); \
+#define WMQ_LOG_NOMEMORY(message)                                                         \
+    do {                                                                                  \
+        debug_print_no_memory(" File:" __FILE__ " Line:" TOSTRING(__LINE__) " " message); \
+        debug_print_no_memory(__func__);                                                  \
     } while (0)
 
 #define WMQ_LOG(level, message, ...)                                  \

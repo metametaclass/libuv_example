@@ -12,7 +12,7 @@ int main(int argc, char **argv) {
     uv_loop_t loop = {0};
     uv_tty_t tty = {0};
 
-    debug_set_level(LL_DETAIL, WMQ_LOG_OPTION_USE_ODS | WMQ_LOG_OPTION_USE_STDERR);
+    debug_set_level(LL_DETAIL, WMQ_LOG_OPTION_USE_ODS | WMQ_LOG_OPTION_USE_STDERR | WMQ_LOG_OPTION_SHOW_TIME);
     WMQ_LOG(LL_INFO, "starting");
 
     rc = uv_loop_init(&loop);

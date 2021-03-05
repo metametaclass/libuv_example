@@ -53,6 +53,15 @@ pid_t gettid() {
 }
 
 #else
+#include <errno.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/syscall.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+typedef uint32_t ticks_t;
 
 ticks_t getTick() {
     struct timespec ts;
@@ -63,9 +72,13 @@ ticks_t getTick() {
     return theTick;
 }
 
+pid_t gettid() {
+    return syscall(SYS_gettid);
+}
+
 #endif
 
-void do_update_time(DWORD ticks, int counter) {
+void do_update_time(ticks_t ticks, int counter) {
     int r;
     time_t dest;
     struct tm tmdata;
@@ -86,7 +99,11 @@ void do_update_time(DWORD ticks, int counter) {
 
     time(&dest);
 
+#ifdef _WIN32
     r = gmtime_s(&tmdata, &dest);
+#else
+    r = gmtime_r(&dest, &tmdata);
+#endif
     if (r != 0) {
         //OutputDebugString(__FUNCTIONW__ L" gmtime_s error");
         goto error;
@@ -108,7 +125,8 @@ error:
     g_time[g_time_size] = '\0';
 }
 
-int debug_update_time_ticks(DWORD ticks) {
+int debug_update_time_ticks(ticks_t ticks) {
+#ifdef _WIN32
     DWORD current, seconds;
     int counter = 0;
 
@@ -127,10 +145,13 @@ int debug_update_time_ticks(DWORD ticks) {
 
     do_update_time(ticks, counter);
     return 1;
+#else
+    return 1;
+#endif
 }
 
 int debug_update_time() {
-    return debug_update_time_ticks(GetTickCount() - g_start_tick);
+    return debug_update_time_ticks(getTick() - g_start_tick);
 }
 
 int debug_set_counters(uint64_t counter, uint64_t time) {
@@ -153,7 +174,9 @@ int debug_set_counters(uint64_t counter, uint64_t time) {
 void debug_set_level(int level, int log_options) {
     int use_stderr = (log_options & WMQ_LOG_OPTION_USE_STDERR) != 0;
     g_log_level = level;
+#ifdef _WIN32
     g_use_ods = (log_options & WMQ_LOG_OPTION_USE_ODS) != 0;
+#endif
 
     g_show_pid = (log_options & WMQ_LOG_OPTION_SHOW_PID) != 0;
     g_show_tid = (log_options & WMQ_LOG_OPTION_SHOW_TID) != 0;
@@ -171,14 +194,22 @@ void debug_set_level(int level, int log_options) {
     //     debug_init_file();
     // }
 
-    g_start_tick = GetTickCount();
+    g_start_tick = getTick();
 
     g_use_stderr = 0;
 
+#ifdef _WIN32
     debug_print(LL_INFO, "debug_set_level: %8d %d ODS:%d stderr:%d %s", getpid(), level, g_use_ods, use_stderr, GetCommandLineA());
+#else
+    debug_print(LL_INFO, "debug_set_level: %8d %d stderr:%d", getpid(), level, use_stderr);
+#endif
     g_use_stderr = use_stderr;
 
+#ifdef _WIN32
     if (!(g_use_ods || g_use_stderr || g_use_file)) {
+#else
+    if (!(g_use_stderr || g_use_file)) {
+#endif
         g_log_level = LL_NO_LOG;
     }
 }
@@ -209,7 +240,7 @@ char *str_level(int level) {
     return "FATAL ";
 }
 
-void print_to_file(FILE *file, DWORD ticks, DWORD pid, DWORD tid, char *level_s, char *buffer) {
+void print_to_file(FILE *file, ticks_t ticks, pid_t pid, pid_t tid, char *level_s, char *buffer) {
     int c;
 
     if (g_show_time) {
@@ -288,7 +319,11 @@ void debug_print(int level, const char *fmt, ...) {
         }
         buffer = newbuffer;
         va_start(ap, fmt);
+#ifdef _WIN32
         n = vsnprintf_s(buffer, size, _TRUNCATE, fmt, ap);
+#else
+        n = vsnprintf(buffer, size, fmt, ap);
+#endif
         //n = _vsn
         va_end(ap);
         if (n > -1 && n < size) {
@@ -315,7 +350,7 @@ void debug_print(int level, const char *fmt, ...) {
 #endif
 
     if (g_use_stderr | g_use_file) {
-        ticks_t ticks = GetTickCount() - g_start_tick;
+        ticks_t ticks = getTick() - g_start_tick;
         pid_t pid = g_show_pid ? getpid() : 0;
         pid_t tid = g_show_tid ? gettid() : 0;
         if (g_show_time) {

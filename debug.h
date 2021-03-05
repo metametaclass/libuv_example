@@ -30,7 +30,7 @@ int debug_check_is_log(int level);
 
 void debug_print(int level, const char *fmt, ...);
 
-void debug_print_w(int level, const wchar_t *fmt, ...);
+//void debug_print_w(int level, const wchar_t *fmt, ...);
 
 void debug_print_no_memory(const char *msg);
 
@@ -38,7 +38,7 @@ int debug_update_time();
 
 int debug_set_counters(uint64_t counter, uint64_t time);
 
-void debug_print_hex(int level, const char *msg, void *data, size_t len, size_t start_offset);
+//void debug_print_hex(int level, const char *msg, void *data, size_t len, size_t start_offset);
 
 void debug_init_error_handlers();
 

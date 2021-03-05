@@ -20,6 +20,7 @@
 #define WMQ_LOG_OPTION_SHOW_TIME 16
 #define WMQ_LOG_OPTION_SHOW_TICKS 32
 #define WMQ_LOG_OPTION_USE_FILE 64
+#define WMQ_LOG_OPTION_SHOW_LOOP_TIME 128
 
 void debug_set_level(int level, int log_options);
 

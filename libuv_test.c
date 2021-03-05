@@ -2,6 +2,7 @@
 
 #define USING_UV_SHARED
 
+#include <stdlib.h>
 #include <uv.h>
 
 #include "debug.h"
@@ -27,7 +28,7 @@ int main(int argc, char** argv) {
     uv_tty_t tty = {0};
 
     debug_set_level(LL_DETAIL, WMQ_LOG_OPTION_USE_ODS | WMQ_LOG_OPTION_USE_STDERR | WMQ_LOG_OPTION_SHOW_TIME | WMQ_LOG_OPTION_SHOW_PID | WMQ_LOG_OPTION_SHOW_TID);
-    WMQ_LOG(LL_INFO, "starting");
+    WMQ_LOG(LL_INFO, "starting, sizeof(long unsigned int):%zu sizeof(int):%zu", sizeof(long unsigned int), sizeof(int));
 
     rc = uv_loop_init(&loop);
     WMQ_CHECK_ERROR_AND_RETURN_RESULT(rc, "uv_loop_init");

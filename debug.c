@@ -25,20 +25,24 @@ static int g_show_tid = 0;
 static int g_show_time = 0;
 static int g_show_ticks = 0;
 static int g_use_file = 0;
+static int g_show_loop_time = 0;
 
-static volatile int32_t g_last_time_update = 0xFFFFFFFF;
+#ifdef _WIN32
+static volatile __LONG32 g_last_time_update = 0xFFFFFFFF;
+#endif
+
 static char g_time[32];
-static size_t g_time_size;
+static int g_time_size;
 
 static volatile uint64_t g_counter = 0x0;
 static volatile uint64_t g_loop_time = 0x0;
 
 #ifdef _WIN32
 //#include <windef.h>
+#include <assert.h>
 #include <windows.h>
-typedef DWORD ticks_t;
-typedef DWORD thread_id_t;
-typedef DWORD pid_t;
+typedef uint32_t ticks_t;
+typedef uint32_t pid_t;
 
 ticks_t getTick() {
     return GetTickCount();
@@ -82,6 +86,9 @@ void do_update_time(ticks_t ticks, int counter) {
     int r;
     time_t dest;
     struct tm tmdata;
+#ifndef _WIN32
+    struct tm *result;
+#endif
 
     //char tmp[128];
 
@@ -101,13 +108,17 @@ void do_update_time(ticks_t ticks, int counter) {
 
 #ifdef _WIN32
     r = gmtime_s(&tmdata, &dest);
-#else
-    r = gmtime_r(&dest, &tmdata);
-#endif
-    if (r != 0) {
+    if (r) {
         //OutputDebugString(__FUNCTIONW__ L" gmtime_s error");
         goto error;
     }
+#else
+    result = gmtime_r(&dest, &tmdata);
+    if (!result) {
+        //OutputDebugString(__FUNCTIONW__ L" gmtime_s error");
+        goto error;
+    }
+#endif
 
     r = strftime(g_time, sizeof(g_time), "%Y-%m-%dT%H:%M:%S", &tmdata);
     if (r <= 0) {
@@ -146,6 +157,7 @@ int debug_update_time_ticks(ticks_t ticks) {
     do_update_time(ticks, counter);
     return 1;
 #else
+    do_update_time(ticks, 0);
     return 1;
 #endif
 }
@@ -185,6 +197,8 @@ void debug_set_level(int level, int log_options) {
     g_show_ticks = (log_options & WMQ_LOG_OPTION_SHOW_TICKS) != 0;
 
     g_use_file = (log_options & WMQ_LOG_OPTION_USE_FILE) != 0;
+
+    g_show_loop_time = (log_options & WMQ_LOG_OPTION_SHOW_LOOP_TIME) != 0;
 
     memset(g_time, '-', sizeof(g_time));
     g_time_size = sizeof(g_time) - 1;
@@ -243,7 +257,7 @@ char *str_level(int level) {
 void print_to_file(FILE *file, ticks_t ticks, pid_t pid, pid_t tid, char *level_s, char *buffer) {
     int c;
 
-    if (g_show_time) {
+    if (g_show_loop_time) {
         fprintf(file, "[%8" PRId64 "][%8" PRId64 "]", g_counter, g_loop_time);
     }
 
@@ -253,13 +267,13 @@ void print_to_file(FILE *file, ticks_t ticks, pid_t pid, pid_t tid, char *level_
             fprintf(file, "[%s] %s\n", level_s, buffer);
             break;
         case 1:
-            fprintf(file, "[%8d][%s] %s\n", tid, level_s, buffer);
+            fprintf(file, "[%8u][%s] %s\n", tid, level_s, buffer);
             break;
         case 2:
-            fprintf(file, "[%8d][%s] %s\n", pid, level_s, buffer);
+            fprintf(file, "[%8u][%s] %s\n", pid, level_s, buffer);
             break;
         case 3:
-            fprintf(file, "[%8d][%8d][%s] %s\n", pid, tid, level_s, buffer);
+            fprintf(file, "[%8u][%8u][%s] %s\n", pid, tid, level_s, buffer);
             break;
         case 4:
             fprintf(file, "[%8d][%s] %s\n", ticks, level_s, buffer);
@@ -337,7 +351,7 @@ void debug_print(int level, const char *fmt, ...) {
 #ifdef _WIN32
     if (g_use_ods) {
         char *new_buffer = (char *)malloc(size + 20);  //[12345678][DETAIL] .... - 10+8+1+size+zero
-        thread_id_t tid = gettid();
+        pid_t tid = gettid();
         if (new_buffer == NULL) {
             debug_print_no_memory(buffer);
             return;

@@ -6,6 +6,7 @@
 #include <uv.h>
 
 #include "debug.h"
+#include "libuv_compat.h"
 #include "wmq_error.h"
 
 //buffer allocation callback
@@ -77,6 +78,10 @@ static void on_tty_read(uv_stream_t* tty_in, ssize_t nread, const uv_buf_t* buf)
         //debug_print_hex(LL_INFO, __func__, buf->base, nread, 0);
         //WMQ_LOG(LL_INFO, "%zu: %.*s", nread, nread, buf->base);
         debug_print_hex(LL_INFO, "", buf->base, nread, 0);
+        if (strncmp(buf->base, "exit", 4) == 0) {
+            WMQ_LOG(LL_INFO, "exit command received");
+            uv_close((uv_handle_t*)tty_in, NULL);
+        }
     }
 }
 
@@ -91,6 +96,12 @@ int init_stdin(uv_loop_t* loop, uv_tty_t* tty) {
     rc = uv_read_start((uv_stream_t*)tty, on_alloc_buffer, on_tty_read);
     WMQ_CHECK_ERROR_AND_RETURN_RESULT(rc, "uv_read_start");
     return 0;
+}
+
+//handle enumerator/visitor callback
+void on_walk_handles(uv_handle_t* handle, void* arg) {
+    WMQ_LOG(LL_INFO, "%s", uv_handle_type_name(uv_handle_get_type(handle)));
+    uv_close(handle, NULL);
 }
 
 #define LISTEN_PORT 5761
@@ -136,6 +147,8 @@ int main(int argc, char** argv) {
 
     rc = uv_run(&loop, UV_RUN_DEFAULT);
     WMQ_CHECK_ERROR_AND_RETURN_RESULT(rc, "uv_run");
+
+    uv_walk(&loop, on_walk_handles, NULL);
 
     //close message loop
     rc = uv_loop_close(&loop);

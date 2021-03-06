@@ -434,6 +434,8 @@ void debug_print_hex(int level, const char *msg, void *data, size_t len, size_t 
             address += 16;
             //buffer_pos = sprintf_s(hex_buffer, HEX_BUFFER_SIZE, "%10X: ", address);
             //buffer_pos = _snprintf(hex_buffer, HEX_BUFFER_SIZE, "%10X: ", address);
+
+            //TODO: check/limit buffer size
             buffer_pos = sprintf(hex_buffer, "%10" PRIxPTR ": ", address);
             buffer_pos_char = 63;
             i = 0;

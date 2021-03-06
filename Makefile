@@ -45,7 +45,7 @@ $(OBJECT_DIR)/%.o: %.c
 	mkdir -p $(OBJECT_DIR)
 	gcc -c $< -I/usr/include -Wall -Wpedantic $(OPTIMIZE_FLAGS) $(DEBUG_FLAGS) -o $@
 
-SRC := libuv_test.c wmq_error.c debug.c
+SRC := libuv_test.c wmq_error.c debug.c libuv_compat.c
 
 TARGET_OBJS     = $(addsuffix .o,$(addprefix $(OBJECT_DIR)/,$(basename $(SRC))))
 

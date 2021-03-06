@@ -69,18 +69,29 @@ void on_accept_cb(uv_stream_t* server_handle, int status) {
     uv_read_start((uv_stream_t*)client, on_alloc_buffer, on_incoming_tcp_read);
 }
 
+//handle visitor callback to close all handles
+void on_walk_close_handle(uv_handle_t* handle, void* arg) {
+    WMQ_LOG(LL_INFO, "closing %s", uv_handle_type_name(uv_handle_get_type(handle)));
+    uv_close(handle, NULL);
+}
+
+//close all handles and end the loop
+static void close_all_handles(uv_loop_t* loop) {
+    uv_walk(loop, on_walk_close_handle, NULL);
+}
+
 //stdin read callback
 static void on_tty_read(uv_stream_t* tty_in, ssize_t nread, const uv_buf_t* buf) {
     if (nread <= 0) {
-        WMQ_LOG(LL_INFO, "close tty_in");
-        uv_close((uv_handle_t*)tty_in, NULL);
+        WMQ_LOG(LL_INFO, "EOF or error: %d", nread);
+        close_all_handles(tty_in->loop);
     } else {
         //debug_print_hex(LL_INFO, __func__, buf->base, nread, 0);
         //WMQ_LOG(LL_INFO, "%zu: %.*s", nread, nread, buf->base);
         debug_print_hex(LL_INFO, "", buf->base, nread, 0);
         if (strncmp(buf->base, "exit", 4) == 0) {
             WMQ_LOG(LL_INFO, "exit command received");
-            uv_close((uv_handle_t*)tty_in, NULL);
+            close_all_handles(tty_in->loop);
         }
     }
 }
